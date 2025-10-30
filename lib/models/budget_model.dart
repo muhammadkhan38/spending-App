@@ -1,22 +1,12 @@
-import 'package:hive/hive.dart';
-
-part 'budget_model.g.dart';
-
-@HiveType(typeId: 3)
-class BudgetModel extends HiveObject {
-  @HiveField(0)
+class BudgetModel {
   String id;
 
-  @HiveField(1)
   double amount;
 
-  @HiveField(2)
   String categoryId;
 
-  @HiveField(3)
   DateTime startDate;
 
-  @HiveField(4)
   DateTime endDate;
 
   BudgetModel({
@@ -46,4 +36,16 @@ class BudgetModel extends HiveObject {
       endDate: DateTime.parse(json['endDate']),
     );
   }
+
+  // SQLite helpers
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'amount': amount,
+    'categoryId': categoryId,
+    'startDate': startDate.toIso8601String(),
+    'endDate': endDate.toIso8601String(),
+  };
+
+  factory BudgetModel.fromMap(Map<String, dynamic> map) =>
+      BudgetModel.fromJson(map.cast<String, dynamic>());
 }

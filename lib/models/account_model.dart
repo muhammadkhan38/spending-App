@@ -1,19 +1,10 @@
-import 'package:hive/hive.dart';
-
-part 'account_model.g.dart';
-
-@HiveType(typeId: 1)
-class AccountModel extends HiveObject {
-  @HiveField(0)
+class AccountModel {
   String id;
 
-  @HiveField(1)
   String name;
 
-  @HiveField(2)
   int colorValue;
 
-  @HiveField(3)
   double balance;
 
   AccountModel({
@@ -40,4 +31,10 @@ class AccountModel extends HiveObject {
       balance: json['balance'] ?? 0.0,
     );
   }
+
+  // SQLite helpers
+  Map<String, dynamic> toMap() => toJson();
+
+  factory AccountModel.fromMap(Map<String, dynamic> map) =>
+      AccountModel.fromJson(map.cast<String, dynamic>());
 }

@@ -1,33 +1,20 @@
-import 'package:hive/hive.dart';
-
-part 'transaction_model.g.dart';
-
 enum TransactionType { expense, income }
 
-@HiveType(typeId: 2)
-class TransactionModel extends HiveObject {
-  @HiveField(0)
+class TransactionModel {
   String id;
 
-  @HiveField(1)
   String title;
 
-  @HiveField(2)
   double amount;
 
-  @HiveField(3)
   String categoryId;
 
-  @HiveField(4)
   String accountId;
 
-  @HiveField(5)
   DateTime date;
 
-  @HiveField(6)
   int type; // 0 for expense, 1 for income
 
-  @HiveField(7)
   String? note;
 
   TransactionModel({
@@ -69,4 +56,10 @@ class TransactionModel extends HiveObject {
       note: json['note'],
     );
   }
+
+  // For SQLite mapping
+  Map<String, dynamic> toMap() => toJson();
+
+  factory TransactionModel.fromMap(Map<String, dynamic> map) =>
+      TransactionModel.fromJson(map.cast<String, dynamic>());
 }

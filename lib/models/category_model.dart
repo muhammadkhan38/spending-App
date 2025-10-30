@@ -1,22 +1,12 @@
-import 'package:hive/hive.dart';
-
-part 'category_model.g.dart';
-
-@HiveType(typeId: 0)
-class CategoryModel extends HiveObject {
-  @HiveField(0)
+class CategoryModel {
   String id;
 
-  @HiveField(1)
   String title;
 
-  @HiveField(2)
   int iconCode;
 
-  @HiveField(3)
   int colorValue;
 
-  @HiveField(4)
   int type; // 0 for expense, 1 for income
 
   CategoryModel({
@@ -49,4 +39,10 @@ class CategoryModel extends HiveObject {
       type: json['type'] ?? 0,
     );
   }
+
+  // SQLite helpers
+  Map<String, dynamic> toMap() => toJson();
+
+  factory CategoryModel.fromMap(Map<String, dynamic> map) =>
+      CategoryModel.fromJson(map.cast<String, dynamic>());
 }
