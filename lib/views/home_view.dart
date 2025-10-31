@@ -81,11 +81,11 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          SpendingView(),
+        children: [
+          const SpendingView(),
           TransactionsView(),
-          CategoriesView(),
-          AccountView(),
+          const CategoriesView(),
+          const AccountView(),
         ],
       ),
     );

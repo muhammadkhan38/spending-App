@@ -11,9 +11,10 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 
 class TransactionsView extends StatelessWidget {
-  const TransactionsView({super.key});
+  TransactionsView({super.key});
 
   @override
+  int? selectedIndex;
   Widget build(BuildContext context) {
     final transactionVM = Get.find<TransactionViewModel>();
     final categoryVM = Get.find<CategoryViewModel>();
@@ -57,10 +58,15 @@ class TransactionsView extends StatelessWidget {
             final transaction = transactionVM.transactions[index];
             final category = categoryVM.getCategoryById(transaction.categoryId);
 
+            // 🟩 Print and show the primary key (ID)
+            print("${transaction.id} <-- Transaction Primary Key");
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Dismissible(
-                key: Key(transaction.id),
+                key: Key(
+                  transaction.id.toString(),
+                ), // ✅ Use transaction.id as key
                 direction: DismissDirection.endToStart,
                 background: Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -70,7 +76,11 @@ class TransactionsView extends StatelessWidget {
                   ),
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(Icons.delete, color: Colors.white, size: 32),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 32,
+                  ),
                 ),
                 confirmDismiss: (direction) async {
                   final result = await Get.dialog<bool>(
@@ -94,139 +104,156 @@ class TransactionsView extends StatelessWidget {
                       ],
                     ),
                   );
-                  
                   return result ?? false;
                 },
                 onDismissed: (direction) {
-                  // Delete the transaction
-                  transactionVM.deleteTransaction(index);
+                  // 🟩 Delete the transaction by ID, not index
+                  transactionVM.deleteTransaction(transaction.id);
                 },
                 child: CustomCard(
-                onTap: () =>
-                    _showEditTransactionDialog(context, transaction, index),
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    // Category Icon
-                    if (category != null)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Color(category.colorValue).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          IconData(
-                            category.iconCode,
-                            fontFamily: 'MaterialIcons',
+                  onTap: () {
+                    selectedIndex = index;
+                    _showEditTransactionDialog(context, transaction, index);
+                  },
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      // Category Icon
+                      if (category != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Color(category.colorValue).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          color: Color(category.colorValue),
-                          size: 24,
+                          child: Icon(
+                            IconData(
+                              category.iconCode,
+                              fontFamily: 'MaterialIcons',
+                            ),
+                            color: Color(category.colorValue),
+                            size: 24,
+                          ),
+                        ),
+                      const SizedBox(width: 12),
+
+                      // 🟩 Category, Date, and Transaction ID
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              category != null ? category.title : '',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat(
+                                'MMM dd, yyyy',
+                              ).format(transaction.date),
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            // 🟩 Show Primary Key
+                            Text(
+                              'ID: ${transaction.id}', // <-- Display Primary Key here
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    const SizedBox(width: 12),
-                    // Category and Date
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+
+                      // Amount and Type
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            category != null ? category.title : '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                            '${transaction.isExpense ? "-" : "+"}Rs ${transaction.amount.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: transaction.isExpense
+                                  ? AppColors.expense
+                                  : AppColors.income,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            DateFormat('MMM dd, yyyy').format(transaction.date),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 14,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: transaction.isExpense
+                                  ? AppColors.expense.withOpacity(0.1)
+                                  : AppColors.income.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              transaction.isExpense ? 'Expense' : 'Income',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: transaction.isExpense
+                                    ? AppColors.expense
+                                    : AppColors.income,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    // Amount and Type
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${transaction.isExpense ? "-" : "+"}Rs ${transaction.amount.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: transaction.isExpense
-                                ? AppColors.expense
-                                : AppColors.income,
-                          ),
+                      const SizedBox(width: 8),
+
+                      // Delete Button
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: AppColors.error,
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: transaction.isExpense
-                                ? AppColors.expense.withOpacity(0.1)
-                                : AppColors.income.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            transaction.isExpense ? 'Expense' : 'Income',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: transaction.isExpense
-                                  ? AppColors.expense
-                                  : AppColors.income,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    // Delete Button
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: AppColors.error,
-                      ),
-                      onPressed: () {
-                        Get.dialog(
-                          AlertDialog(
-                            title: const Text('Delete Transaction'),
-                            content: const Text(
-                              'Are you sure you want to delete this transaction?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Get.back(),
-                                child: const Text('Cancel'),
+                        onPressed: () {
+                          Get.dialog(
+                            AlertDialog(
+                              title: const Text('Delete Transaction'),
+                              content: const Text(
+                                'Are you sure you want to delete this transaction?',
                               ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  transactionVM.deleteTransaction(index);
-                                  Get.back();
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.error,
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Get.back(),
+                                  child: const Text('Cancel'),
                                 ),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                                ElevatedButton(
+                                  onPressed: () {
+                                    transactionVM.deleteTransaction(
+                                      transaction.id,
+                                    );
+                                    Get.back();
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
+            );
           },
         );
       }),
@@ -534,7 +561,15 @@ class TransactionsView extends StatelessWidget {
                               ),
                               ElevatedButton(
                                 onPressed: () {
-                                  transactionVM.deleteTransaction(index);
+                                  //index=transactionVM.transactions.indexOf(transactionVM);
+                                  transactionVM.deleteTransaction(
+                                    transaction.id,
+                                  );
+                                  //transactionVM.deleteTransaction(transaction.categoryId);
+                                  // print("${transaction.id} this is the transaction id");
+                                  print(
+                                    "${transaction.categoryId} this is the category id",
+                                  );
                                   Get.back();
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -739,7 +774,7 @@ class TransactionsView extends StatelessWidget {
                           );
 
                           transactionVM.updateTransaction(
-                            index,
+                            transaction.id,
                             updatedTransaction,
                           );
                         },

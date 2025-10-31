@@ -16,6 +16,7 @@ class CategoriesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final categoryVM = Get.find<CategoryViewModel>();
+    final selectedType = (-1).obs; // -1 = All, 0 = Expense, 1 = Income
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -49,78 +50,161 @@ class CategoriesView extends StatelessWidget {
           );
         }
 
-        return ListView.builder(
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          itemCount: categoryVM.categories.length,
-          itemBuilder: (context, index) {
-            final category = categoryVM.categories[index];
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: CustomCard(
-                onTap: () => _showEditCategoryDialog(context, category, index),
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CategoryIcon(
-                      icon: IconData(
-                        category.iconCode,
-                        fontFamily: 'MaterialIcons',
-                      ),
-                      color: Color(category.colorValue),
-                      size: 28,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            category.title,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+          child: Column(
+            children: [
+              // Toggle Buttons: Expense / Income
+              Row(
+                children: [
+                  Expanded(
+                    child: Obx(
+                      () => GestureDetector(
+                        onTap: () => selectedType.value = 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: selectedType.value == 0
+                                ? AppColors.expense
+                                : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: category.isExpense
-                                  ? AppColors.expense.withOpacity(0.1)
-                                  : AppColors.income.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                          child: Center(
                             child: Text(
-                              category.isExpense ? 'Expense' : 'Income',
+                              'Expense',
                               style: TextStyle(
-                                fontSize: 10,
-                                color: category.isExpense
-                                    ? AppColors.expense
-                                    : AppColors.income,
+                                color: selectedType.value == 0
+                                    ? Colors.white
+                                    : Colors.black87,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                    const Icon(
-                      Icons.edit,
-                      size: 16,
-                      color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(
+                      () => GestureDetector(
+                        onTap: () => selectedType.value = 1,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: selectedType.value == 1
+                                ? AppColors.income
+                                : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Income',
+                              style: TextStyle(
+                                color: selectedType.value == 1
+                                    ? Colors.white
+                                    : Colors.black87,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          },
+              const SizedBox(height: 16),
+
+              // Category list (filtered)
+              Obx(() {
+                final categoriesToShow = selectedType.value == -1
+                    ? categoryVM.categories
+                    : categoryVM.getCategoriesByType(selectedType.value);
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: categoriesToShow.length,
+                  itemBuilder: (context, index) {
+                    final category = categoriesToShow[index];
+
+                    // If a type is selected (0 or 1) show compact view: icon + title only
+                    final compact =
+                        selectedType.value == 0 || selectedType.value == 1;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: CustomCard(
+                        onTap: () => _showEditCategoryDialog(
+                          context,
+                          category,
+                          categoryVM.categories.indexOf(category),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            CategoryIcon(
+                              icon: IconData(
+                                category.iconCode,
+                                fontFamily: 'MaterialIcons',
+                              ),
+                              color: Color(category.colorValue),
+                              size: 28,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                category.title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            // In compact mode we show only icon+title, no badge or edit icon
+                            if (!compact) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: category.isExpense
+                                      ? AppColors.expense.withOpacity(0.1)
+                                      : AppColors.income.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  category.isExpense ? 'Expense' : 'Income',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: category.isExpense
+                                        ? AppColors.expense
+                                        : AppColors.income,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.edit,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ],
+          ),
         );
       }),
       floatingActionButton: FloatingActionButton.extended(

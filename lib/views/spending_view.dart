@@ -6,7 +6,7 @@ import '../models/transaction_model.dart';
 import '../viewmodels/transaction_viewmodel.dart';
 import '../viewmodels/category_viewmodel.dart';
 import '../utils/app_theme.dart';
-import '../widgets/custom_card.dart';
+
 import '../widgets/custom_button.dart';
 
 class SpendingView extends StatelessWidget {

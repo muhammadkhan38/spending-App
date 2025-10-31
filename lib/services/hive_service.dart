@@ -24,9 +24,11 @@ class HiveService {
 
   // Simple box-like wrapper used by viewmodels. Only implements the
   // members the app relies on (values, length, getAt).
-  static InMemoryBox<CategoryModel> get categoriesBox => InMemoryBox(_categories);
+  static InMemoryBox<CategoryModel> get categoriesBox =>
+      InMemoryBox(_categories);
   static InMemoryBox<AccountModel> get accountsBox => InMemoryBox(_accounts);
-  static InMemoryBox<TransactionModel> get transactionsBox => InMemoryBox(_transactions);
+  static InMemoryBox<TransactionModel> get transactionsBox =>
+      InMemoryBox(_transactions);
 
   /// Initialize the database and load data into in-memory caches.
   static Future<void> init() async {
@@ -87,10 +89,12 @@ class HiveService {
     await _loadAll();
 
     // Initialize default categories if empty
+    // Use a simple millis string as id (don't append title). Also, _loadAll
+    // deduplicates entries so repeated initialization won't create duplicates.
     if (_categories.isEmpty) {
       for (var category in AppConstants.defaultCategories) {
         final model = CategoryModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + (category['title'] as String),
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: category['title'] as String,
           iconCode: category['iconCode'] as int,
           colorValue: category['colorValue'] as int,
@@ -112,9 +116,17 @@ class HiveService {
       ..addAll(accountsMaps.map((m) => AccountModel.fromMap(m)).toList());
 
     final categoriesMaps = await db.query('categories', orderBy: 'rowid');
+    // Deduplicate by id (keep last occurrence) to avoid duplicate menu items
+    final List<CategoryModel> loaded = categoriesMaps
+        .map((m) => CategoryModel.fromMap(m))
+        .toList();
+    final Map<String, CategoryModel> byId = {};
+    for (var c in loaded) {
+      byId[c.id] = c;
+    }
     _categories
       ..clear()
-      ..addAll(categoriesMaps.map((m) => CategoryModel.fromMap(m)).toList());
+      ..addAll(byId.values.toList());
 
     final txMaps = await db.query('transactions', orderBy: 'rowid');
     _transactions
@@ -125,20 +137,70 @@ class HiveService {
   // Category operations
   static Future<void> addCategory(CategoryModel category) async {
     if (_db == null) throw StateError('Database not initialized');
-    await _db!.insert('categories', category.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
-    _categories.add(category);
+    await _db!.insert(
+      'categories',
+      category.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    // Reload all to keep the in-memory cache consistent and avoid duplicates
+    await _loadAll();
   }
 
   static Future<void> updateCategory(int index, CategoryModel category) async {
     if (_db == null) throw StateError('Database not initialized');
     final old = _categories[index];
-    await _db!.update('categories', category.toMap(), where: 'id = ?', whereArgs: [old.id]);
+    await _db!.update(
+      'categories',
+      category.toMap(),
+      where: 'id = ?',
+      whereArgs: [old.id],
+    );
     _categories[index] = category;
   }
 
   static Future<void> deleteCategory(int index) async {
     if (_db == null) throw StateError('Database not initialized');
     final id = _categories[index].id;
+
+    // Find all transactions that reference this category so we can
+    // reverse their effect on account balances before deleting them.
+    final transactionsToDelete = _transactions
+        .where((t) => t.categoryId == id)
+        .toList(growable: false);
+
+    for (var transaction in transactionsToDelete) {
+      // Reverse the transaction effect on its account balance
+      for (int i = 0; i < _accounts.length; i++) {
+        final account = _accounts[i];
+        if (account.id == transaction.accountId) {
+          if (transaction.isExpense) {
+            account.balance += transaction.amount;
+          } else {
+            account.balance -= transaction.amount;
+          }
+          await _db!.update(
+            'accounts',
+            account.toMap(),
+            where: 'id = ?',
+            whereArgs: [account.id],
+          );
+          _accounts[i] = account;
+          break;
+        }
+      }
+    }
+
+    // Delete the transactions from the DB and in-memory cache
+    if (transactionsToDelete.isNotEmpty) {
+      await _db!.delete(
+        'transactions',
+        where: 'categoryId = ?',
+        whereArgs: [id],
+      );
+      _transactions.removeWhere((t) => t.categoryId == id);
+    }
+
+    // Delete the category itself
     await _db!.delete('categories', where: 'id = ?', whereArgs: [id]);
     _categories.removeAt(index);
   }
@@ -146,14 +208,23 @@ class HiveService {
   // Account operations
   static Future<void> addAccount(AccountModel account) async {
     if (_db == null) throw StateError('Database not initialized');
-    await _db!.insert('accounts', account.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    await _db!.insert(
+      'accounts',
+      account.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     _accounts.add(account);
   }
 
   static Future<void> updateAccount(int index, AccountModel account) async {
     if (_db == null) throw StateError('Database not initialized');
     final old = _accounts[index];
-    await _db!.update('accounts', account.toMap(), where: 'id = ?', whereArgs: [old.id]);
+    await _db!.update(
+      'accounts',
+      account.toMap(),
+      where: 'id = ?',
+      whereArgs: [old.id],
+    );
     _accounts[index] = account;
   }
 
@@ -167,7 +238,11 @@ class HiveService {
   // Transaction operations
   static Future<void> addTransaction(TransactionModel transaction) async {
     if (_db == null) throw StateError('Database not initialized');
-    await _db!.insert('transactions', transaction.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    await _db!.insert(
+      'transactions',
+      transaction.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     _transactions.add(transaction);
 
     // Update account balance
@@ -179,24 +254,66 @@ class HiveService {
         } else {
           account.balance += transaction.amount;
         }
-        await _db!.update('accounts', account.toMap(), where: 'id = ?', whereArgs: [account.id]);
+        await _db!.update(
+          'accounts',
+          account.toMap(),
+          where: 'id = ?',
+          whereArgs: [account.id],
+        );
         _accounts[i] = account;
         break;
       }
     }
   }
 
-  static Future<void> updateTransaction(int index, TransactionModel transaction) async {
+  /// Update a transaction by its id (primary key).
+  static Future<void> updateTransaction(
+    String id,
+    TransactionModel transaction,
+  ) async {
     if (_db == null) throw StateError('Database not initialized');
-    final old = _transactions[index];
-    await _db!.update('transactions', transaction.toMap(), where: 'id = ?', whereArgs: [old.id]);
+
+    final index = _transactions.indexWhere((t) => t.id == id);
+    if (index == -1) {
+      // If transaction isn't found in-memory, attempt a DB update by id
+      await _db!.update(
+        'transactions',
+        transaction.toMap(),
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      // reload caches to ensure consistency
+      await _loadAll();
+      return;
+    }
+
+    await _db!.update(
+      'transactions',
+      transaction.toMap(),
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     _transactions[index] = transaction;
   }
 
-  static Future<void> deleteTransaction(int index) async {
+  /// Delete a transaction by its id (primary key).
+  ///
+  /// The viewmodels and UI call this with the transaction `id` string, so
+  /// this method finds the matching transaction in the in-memory cache,
+  /// updates the related account balance (reverses the transaction), removes
+  /// it from the DB and the in-memory list.
+  static Future<void> deleteTransaction(String id) async {
     if (_db == null) throw StateError('Database not initialized');
+
+    final index = _transactions.indexWhere((t) => t.id == id);
+    if (index == -1) {
+      // Nothing to delete
+      return;
+    }
+
     final transaction = _transactions[index];
-    // Update account balance (reverse)
+
+    // Update account balance (reverse the transaction effect)
     for (int i = 0; i < _accounts.length; i++) {
       final account = _accounts[i];
       if (account.id == transaction.accountId) {
@@ -205,13 +322,19 @@ class HiveService {
         } else {
           account.balance -= transaction.amount;
         }
-        await _db!.update('accounts', account.toMap(), where: 'id = ?', whereArgs: [account.id]);
+        await _db!.update(
+          'accounts',
+          account.toMap(),
+          where: 'id = ?',
+          whereArgs: [account.id],
+        );
         _accounts[i] = account;
         break;
       }
     }
 
-    await _db!.delete('transactions', where: 'id = ?', whereArgs: [transaction.id]);
+    // Delete from DB and in-memory cache
+    await _db!.delete('transactions', where: 'id = ?', whereArgs: [id]);
     _transactions.removeAt(index);
   }
 }
@@ -222,5 +345,6 @@ class InMemoryBox<T> {
 
   Iterable<T> get values => _list;
   int get length => _list.length;
-  T? getAt(int index) => index >= 0 && index < _list.length ? _list[index] : null;
+  T? getAt(int index) =>
+      index >= 0 && index < _list.length ? _list[index] : null;
 }

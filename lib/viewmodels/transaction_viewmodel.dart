@@ -58,11 +58,11 @@ class TransactionViewModel extends GetxController {
   }
 
   Future<void> updateTransaction(
-    int index,
+    String id,
     TransactionModel transaction,
   ) async {
     try {
-      await HiveService.updateTransaction(index, transaction);
+      await HiveService.updateTransaction(id, transaction);
       loadTransactions();
       Get.back();
       Get.snackbar(
@@ -75,9 +75,10 @@ class TransactionViewModel extends GetxController {
     }
   }
 
-  Future<void> deleteTransaction(int index) async {
+  Future<void> deleteTransaction(String id) async {
     try {
-      await HiveService.deleteTransaction(index);
+      await HiveService.deleteTransaction(id);
+
       loadTransactions();
       // Reload accounts to update balances
       Get.find<AccountViewModel>().loadAccounts();
