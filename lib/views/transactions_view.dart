@@ -68,8 +68,9 @@ class TransactionsView extends StatelessWidget {
                   transaction.id.toString(),
                 ), // ✅ Use transaction.id as key
                 direction: DismissDirection.endToStart,
+
                 background: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
+                  margin: const EdgeInsets.only(bottom: 6),
                   decoration: BoxDecoration(
                     color: AppColors.error,
                     borderRadius: BorderRadius.circular(16),
@@ -79,7 +80,7 @@ class TransactionsView extends StatelessWidget {
                   child: const Icon(
                     Icons.delete,
                     color: Colors.white,
-                    size: 32,
+                    size: 20,
                   ),
                 ),
                 confirmDismiss: (direction) async {
@@ -120,22 +121,22 @@ class TransactionsView extends StatelessWidget {
                     children: [
                       // Category Icon
                       if (category != null)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Color(category.colorValue).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            IconData(
-                              category.iconCode,
-                              fontFamily: 'MaterialIcons',
-                            ),
-                            color: Color(category.colorValue),
-                            size: 24,
-                          ),
-                        ),
-                      const SizedBox(width: 12),
+                        // Container(
+                        //   padding: const EdgeInsets.all(12),
+                        //   decoration: BoxDecoration(
+                        //     color: Color(category.colorValue).withOpacity(0.1),
+                        //     borderRadius: BorderRadius.circular(12),
+                        //   ),
+                        //   child: Icon(
+                        //     IconData(
+                        //       category.iconCode,
+                        //       fontFamily: 'MaterialIcons',
+                        //     ),
+                        //     color: Color(category.colorValue),
+                        //     size: 24,
+                        //   ),
+                        // ),
+                        const SizedBox(width: 12),
 
                       // 🟩 Category, Date, and Transaction ID
                       Expanded(
@@ -160,14 +161,6 @@ class TransactionsView extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            // 🟩 Show Primary Key
-                            Text(
-                              'ID: ${transaction.id}', // <-- Display Primary Key here
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -268,7 +261,7 @@ class TransactionsView extends StatelessWidget {
   void _showTransactionTypeDialog(BuildContext context) {
     Get.dialog(
       Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 20),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 15),
         child: Padding(
           padding: const EdgeInsets.all(25),
           child: Column(
@@ -331,7 +324,7 @@ class TransactionsView extends StatelessWidget {
 
     Get.dialog(
       Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 30),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 20),
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(10),
@@ -507,11 +500,7 @@ class TransactionsView extends StatelessWidget {
     );
   }
 
-  void _showEditTransactionDialog(
-    BuildContext context,
-    TransactionModel transaction,
-    int index,
-  ) {
+  void _showEditTransactionDialog(BuildContext context, TransactionModel transaction, int index,) {
     final transactionVM = Get.find<TransactionViewModel>();
     final categoryVM = Get.find<CategoryViewModel>();
 

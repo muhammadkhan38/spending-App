@@ -134,14 +134,14 @@ class CategoriesView extends StatelessWidget {
                         selectedType.value == 0 || selectedType.value == 1;
 
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 5),
                       child: CustomCard(
                         onTap: () => _showEditCategoryDialog(
                           context,
                           category,
                           categoryVM.categories.indexOf(category),
                         ),
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(10),
                         child: Row(
                           children: [
                             CategoryIcon(
@@ -150,7 +150,7 @@ class CategoriesView extends StatelessWidget {
                                 fontFamily: 'MaterialIcons',
                               ),
                               color: Color(category.colorValue),
-                              size: 28,
+                              size: 15,
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -223,7 +223,10 @@ class CategoriesView extends StatelessWidget {
     final selectedType = 0.obs; // 0 for expense, 1 for income
 
     Get.dialog(
+
       Dialog(
+
+        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 20),
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -444,6 +447,7 @@ class CategoriesView extends StatelessWidget {
 
     Get.dialog(
       Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 20),
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(20),

@@ -342,11 +342,7 @@ class AccountView extends StatelessWidget {
     );
   }
 
-  void _showEditAccountDialog(
-    BuildContext context,
-    AccountModel account,
-    int index,
-  ) {
+  void _showEditAccountDialog(BuildContext context, AccountModel account, int index,) {
     final accountVM = Get.find<AccountViewModel>();
     final nameController = TextEditingController(text: account.name);
     final selectedColor = Rx<Color>(Color(account.colorValue));

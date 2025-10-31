@@ -8,6 +8,7 @@ import '../viewmodels/category_viewmodel.dart';
 import '../utils/app_theme.dart';
 
 import '../widgets/custom_button.dart';
+import '../widgets/custom_text_field.dart';
 
 class SpendingView extends StatelessWidget {
   const SpendingView({super.key});
@@ -165,10 +166,7 @@ class SpendingView extends StatelessWidget {
                             ? 'Add Expense'
                             : 'Add Income',
                         icon: Icons.add,
-                        onPressed: () => _showAddTransactionDialog(
-                          context,
-                          selectedCategoryType.value,
-                        ),
+                        onPressed: () => _showAddTransactionDialog(context, selectedCategoryType.value,),
                         backgroundColor: selectedCategoryType.value == 0
                             ? AppColors.expense
                             : AppColors.income,
@@ -311,26 +309,28 @@ class SpendingView extends StatelessWidget {
     );
   }
 
-  void _showAddTransactionDialog(BuildContext context, int type) {
+  void _showAddTransactionDialog(BuildContext context, int transactionType) {
     final transactionVM = Get.find<TransactionViewModel>();
     final categoryVM = Get.find<CategoryViewModel>();
 
     final amountController = TextEditingController();
     final noteController = TextEditingController();
+    final selectedType = transactionType.obs; // Use passed transaction type
     final selectedCategory = Rxn<String>();
     final selectedDate = DateTime.now().obs;
 
     Get.dialog(
       Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 30),
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(10),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Add ${type == 0 ? "Expense" : "Income"}',
+                  'Add ${transactionType == 1 ? "Income" : "Expense"}',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -340,7 +340,9 @@ class SpendingView extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // Amount
-                TextField(
+                CustomTextField(
+                  label: 'Amount',
+                  hint: 'Enter amount',
                   controller: amountController,
                   keyboardType: TextInputType.number,
                   inputFormatters: [
@@ -348,55 +350,60 @@ class SpendingView extends StatelessWidget {
                       RegExp(r'^\d+\.?\d{0,2}'),
                     ),
                   ],
-                  decoration: InputDecoration(
-                    labelText: 'Amount',
-                    hintText: 'Enter amount',
-                    prefixText: 'Rs ',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  prefixIcon: const Icon(Icons.attach_money),
                 ),
                 const SizedBox(height: 16),
 
-                // Category Dropdown
+                // Category Dropdown - Only show categories of selected type
                 Obx(() {
-                  final categories = categoryVM.getCategoriesByType(type);
-                  return DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: 'Category',
-                      hintText: 'Select category',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    value: selectedCategory.value,
-                    items: categories.map((category) {
-                      return DropdownMenuItem(
-                        value: category.id,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              IconData(
-                                category.iconCode,
-                                fontFamily: 'MaterialIcons',
-                              ),
-                              color: Color(category.colorValue),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                category.title,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                  final filteredCategories = categoryVM.getCategoriesByType(
+                    selectedType.value,
+                  );
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Category',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (value) => selectedCategory.value = value,
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          hintText: 'Select category',
+                        ),
+                        value: selectedCategory.value,
+                        items: filteredCategories.map((category) {
+                          return DropdownMenuItem(
+                            value: category.id,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  IconData(
+                                    category.iconCode,
+                                    fontFamily: 'MaterialIcons',
+                                  ),
+                                  color: Color(category.colorValue),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    category.title,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) => selectedCategory.value = value,
+                      ),
+                    ],
                   );
                 }),
                 const SizedBox(height: 16),
@@ -416,22 +423,12 @@ class SpendingView extends StatelessWidget {
                       }
                     },
                     child: InputDecorator(
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Date',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        suffixIcon: Icon(Icons.calendar_today),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            DateFormat(
-                              'MMM dd, yyyy',
-                            ).format(selectedDate.value),
-                          ),
-                          const Icon(Icons.calendar_today, size: 20),
-                        ],
+                      child: Text(
+                        DateFormat('MMM dd, yyyy').format(selectedDate.value),
                       ),
                     ),
                   );
@@ -439,16 +436,11 @@ class SpendingView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Note
-                TextField(
+                CustomTextField(
+                  label: 'Note (Optional)',
+                  hint: 'Enter note',
                   controller: noteController,
                   maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Note (Optional)',
-                    hintText: 'Enter note',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -471,7 +463,7 @@ class SpendingView extends StatelessWidget {
                               selectedCategory.value == null) {
                             Get.snackbar(
                               'Error',
-                              'Please fill amount and category',
+                              'Please fill all required fields',
                               snackPosition: SnackPosition.BOTTOM,
                             );
                             return;
@@ -485,7 +477,7 @@ class SpendingView extends StatelessWidget {
                             categoryId: selectedCategory.value!,
                             accountId: '',
                             date: selectedDate.value,
-                            type: type,
+                            type: selectedType.value,
                             note: noteController.text.isEmpty
                                 ? null
                                 : noteController.text,
